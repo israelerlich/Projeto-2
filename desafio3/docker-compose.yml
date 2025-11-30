@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: app-web
+    env_file:
+      - ./web/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: app-db
+    environment:
+      POSTGRES_DB: student_notes
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: studentpass
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  cache:
+    image: redis:7-alpine
+    container_name: app-cache
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    networks:
+      - app-network
+
+volumes:
+  db-data:
+
+networks:
+  app-network:
+    driver: bridge

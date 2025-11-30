@@ -1,0 +1,14 @@
+services:
+  servico-a:
+    build: ./servico-a
+    container_name: servico-a
+    ports:
+      - "5001:5001"
+
+  servico-b:
+    build: ./servico-b
+    container_name: servico-b
+    ports:
+      - "5002:5002"
+    depends_on:
+      - servico-a

@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "3000:3000"
+    environment:
+      USERS_SERVICE_URL: http://users-service:3001
+      ORDERS_SERVICE_URL: http://orders-service:3002
+      PORT: 3000
+    depends_on:
+      - users-service
+      - orders-service
+  users-service:
+    build: ./users-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+  orders-service:
+    build: ./orders-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+
+networks:
+  default:
+    name: microservices-network

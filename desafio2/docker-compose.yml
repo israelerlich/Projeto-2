@@ -1,0 +1,17 @@
+services:
+  writer:
+    build: .
+    container_name: volume-writer
+    command: python write_data.py
+    volumes:
+      - sqlite_data:/data
+  reader:
+    build: .
+    container_name: volume-reader
+    command: python read_data.py
+    volumes:
+      - sqlite_data:/data
+    depends_on:
+      - writer
+volumes:
+  sqlite_data:
