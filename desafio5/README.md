@@ -4,24 +4,25 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
 
-Este projeto implementa uma arquitetura de microsserviços dividida em dois domínios de negócio (**Users** e **Orders**), orquestrados por um **API Gateway**. 
+Este projeto implementa uma arquitetura de microsserviços dividida em dois domínios de negócio (**Users** e **Orders**), orquestrados por um **API Gateway**.
 
 O objetivo é servir como um laboratório prático para explorar padrões de comunicação distribuída, desacoplamento de serviços e centralização de requisições.
 
-## arquitetura e Decisões Técnicas 
-
-[Image of microservices architecture diagram]
-
+## 🏗 Arquitetura e Decisões Técnicas
 
 A solução foi desenhada priorizando a simplicidade da infraestrutura para focar nos padrões de arquitetura:
 
-* **API Gateway (BFF - Backend for Frontend):** * Construído com **Express**.
+* **API Gateway (BFF - Backend for Frontend):**
+    * Construído com **Express**.
     * Atua como ponto único de entrada (`http://localhost:3000`).
     * Centraliza o roteamento e simplifica o consumo por parte do cliente, evitando que o front-end precise conhecer os endereços de cada microsserviço.
-* **Microsserviços Desacoplados:** * Cada serviço (`users-service` e `orders-service`) possui seu próprio contexto delimitado.
+* **Microsserviços Desacoplados:**
+    * Cada serviço (`users-service` e `orders-service`) possui seu próprio contexto delimitado.
     * Comunicação **síncrona via HTTP** utilizando a rede interna do Docker.
-* **Persistência In-Memory:** * Para fins didáticos, os dados são persistidos em memória (arquivos `.js` e vetores), eliminando a complexidade de configurar bancos de dados externos neste estágio.
-* **Observabilidade Básica:** * Implementação de *Health Checks* em todos os serviços.
+* **Persistência In-Memory:**
+    * Para fins didáticos, os dados são persistidos em memória (arquivos `.js` e vetores), eliminando a complexidade de configurar bancos de dados externos neste estágio.
+* **Observabilidade Básica:**
+    * Implementação de *Health Checks* em todos os serviços.
     * Logs estruturados no console para rastreamento de requisições.
 
 ## 🧩 Componentes do Sistema
@@ -87,7 +88,3 @@ curl http://localhost:3000/users
 
 # Buscar pedidos do usuário 'u1'
 curl http://localhost:3000/users/u1/orders
-
-🧹 Limpeza do Ambiente
-Para parar a execução e remover os containers e redes criados:
-docker-compose down --rmi local --volumes
