@@ -1,66 +1,79 @@
 # Docker Compose Multi-Service Playground
 
-Este projeto demonstra como orquestrar três serviços dependentes com Docker Compose: uma aplicação web em Flask, um banco PostgreSQL e um cache Redis. A ideia é mostrar como integrar tudo de maneira simples, como faria um estudante curioso que se preocupa com boas práticas básicas.
+Projeto didático que orquestra três serviços interdependentes com Docker Compose: uma API Flask (`web`), um PostgreSQL (`db`) e um Redis (`cache`). A solução foca em demonstrar integração entre componentes, isolamento por container e como automatizar dependências com uma stack leve.
 
-## Estrutura
+## Arquitetura e decisões técnicas
+
+- **Topologia**: um único arquivo `docker-compose.yml` define a rede interna padrão (`bridge`), volume persistente para o banco e variáveis de ambiente compartilhadas com a aplicação.
+- **API Flask**: concentra a lógica de negócio e expõe endpoints HTTP em `http://localhost:8000`. A aplicação grava o total de visitas na tabela `visit_counter` (PostgreSQL) e usa o Redis como cache de leitura.
+- **PostgreSQL**: inicia com `init.sql`, garantindo esquema e dados mínimos. Volume nomeado preserva o estado mesmo após `docker compose down` (sem `-v`).
+- **Redis**: atua como cache de chave/valor, reduzindo roundtrips no banco para leituras repetidas. Mantém dados efêmeros, logo não persiste volume.
+- **Comunicação**: Flask usa as variáveis `POSTGRES_HOST` e `REDIS_HOST` para alcançar os serviços dentro da rede Compose; credenciais e parâmetros ficam no arquivo `.env` consumido pelo `docker-compose.yml`.
+
+```
+        +-------------+        +------------+
+HTTP --->  |   Flask     | ---->  | PostgreSQL |
+        |   web:app   |        |    db      |
+        +-------------+        +------------+
+            |                     ^
+            v                     |
+        +-------------+--------------+
+        |  Redis      |
+        |  cache      |
+        +-------------+
+```
+
+## Estrutura do repositório
 
 ```
 .
-├── docker-compose.yml
+├── docker-compose.yml    # Orquestra os serviços e rede
 ├── db
-│   └── init.sql
+│   └── init.sql          # Criação da tabela visit_counter
 └── web
-    ├── .env
-    ├── Dockerfile
-    ├── app.py
-    └── requirements.txt
+   ├── .env              # Configurações de acesso aos serviços (não versionar em produção)
+   ├── Dockerfile        # Build da imagem Flask
+   ├── app.py            # Aplicação principal
+   └── requirements.txt  # Dependências Python
 ```
 
-## Pré-requisitos
+## Como funciona (passo a passo)
 
-- Docker Desktop ou engine compatível com Docker Compose v2
+- **Subida**: `docker compose up` constrói a imagem `web`, cria containers e conecta cada um na rede padrão.
+- **Inicialização**: o container `db` executa `init.sql`, criando a tabela `visit_counter`; `web` aguarda o banco responder antes de aceitar requisições.
+- **Fluxo de requisição**: ao acessar `/`, a API verifica o cache Redis; se não houver dado, consulta o PostgreSQL, incrementa o contador e propaga o valor para o Redis.
+- **Health check**: endpoint `/health` retorna `200` quando Flask consegue se comunicar com os serviços dependentes.
 
-## Como rodar
+## Execução passo a passo
 
-1. Suba os serviços:
+1. **Instale os pré-requisitos**
+  - Docker Desktop (ou Docker Engine com Compose v2)
 
-   ```powershell
-   docker compose up --build
-   ```
-
-2. Acesse a aplicação:
-
-   - Navegador: http://localhost:8000/
-   - Healthcheck: http://localhost:8000/health
-
-3. Observe o contador sendo incrementado a cada requisição, provando que a aplicação conversa com o PostgreSQL e usa o Redis como cache.
-
-### Testando a comunicação manualmente
-
-- Banco de dados:
-
+2. **Construa e suba os containers**
   ```powershell
-  docker compose exec db psql -U student -d student_notes -c "SELECT * FROM visit_counter;"
+  docker compose up --build
   ```
 
-- Cache:
+3. **Verifique a aplicação**
+  - Navegador: `http://localhost:8000/`
+  - Health check: `http://localhost:8000/health`
 
+4. **Teste a comunicação entre serviços**
+  - Consultar o contador direto no PostgreSQL:
+    ```powershell
+    docker compose exec db psql -U student -d student_notes -c "SELECT * FROM visit_counter;"
+    ```
+  - Conferir o valor em cache no Redis:
+    ```powershell
+    docker compose exec cache redis-cli GET visit_counter:homepage
+    ```
+  - Requisitar a API via linha de comando:
+    ```powershell
+    curl http://localhost:8000/
+    ```
+
+5. **Encerrar e limpar**
   ```powershell
-  docker compose exec cache redis-cli GET visit_counter:homepage
+  docker compose down -v
   ```
-
-- Aplicação:
-
-  ```powershell
-  curl http://localhost:8000/
-  ```
-
-Esses comandos dão uma visão rápida da comunicação entre os serviços.
-
-## Encerrando
-
-```powershell
-docker compose down -v
-```
-
-Isso remove containers e volume do banco, garantindo um recomeço limpo.
+  Remove containers e o volume do banco para um recomeço limpo.
