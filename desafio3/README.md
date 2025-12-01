@@ -1,79 +1,33 @@
-# Docker Compose Multi-Service Playground
+# Docker Compose Playground: Flask, Postgres & Redis
 
-Projeto didático que orquestra três serviços interdependentes com Docker Compose: uma API Flask (`web`), um PostgreSQL (`db`) e um Redis (`cache`). A solução foca em demonstrar integração entre componentes, isolamento por container e como automatizar dependências com uma stack leve.
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-## Arquitetura e decisões técnicas
+Este projeto é um laboratório prático de orquestração de containers. Ele demonstra a integração entre uma aplicação **Python (Flask)**, um banco de dados relacional (**PostgreSQL**) e um sistema de cache em memória (**Redis**).
 
-- **Topologia**: um único arquivo `docker-compose.yml` define a rede interna padrão (`bridge`), volume persistente para o banco e variáveis de ambiente compartilhadas com a aplicação.
-- **API Flask**: concentra a lógica de negócio e expõe endpoints HTTP em `http://localhost:8000`. A aplicação grava o total de visitas na tabela `visit_counter` (PostgreSQL) e usa o Redis como cache de leitura.
-- **PostgreSQL**: inicia com `init.sql`, garantindo esquema e dados mínimos. Volume nomeado preserva o estado mesmo após `docker compose down` (sem `-v`).
-- **Redis**: atua como cache de chave/valor, reduzindo roundtrips no banco para leituras repetidas. Mantém dados efêmeros, logo não persiste volume.
-- **Comunicação**: Flask usa as variáveis `POSTGRES_HOST` e `REDIS_HOST` para alcançar os serviços dentro da rede Compose; credenciais e parâmetros ficam no arquivo `.env` consumido pelo `docker-compose.yml`.
+O objetivo é exemplificar padrões de arquitetura como persistência de dados, *caching* para performance e isolamento de dependências usando uma stack leve e automatizada.
 
-```
-        +-------------+        +------------+
-HTTP --->  |   Flask     | ---->  | PostgreSQL |
-        |   web:app   |        |    db      |
-        +-------------+        +------------+
-            |                     ^
-            v                     |
-        +-------------+--------------+
-        |  Redis      |
-        |  cache      |
-        +-------------+
-```
+## 🏗 Arquitetura e Decisões Técnicas 
 
-## Estrutura do repositório
+[Image of docker compose architecture diagram]
 
-```
-.
-├── docker-compose.yml    # Orquestra os serviços e rede
-├── db
-│   └── init.sql          # Criação da tabela visit_counter
-└── web
-   ├── .env              # Configurações de acesso aos serviços (não versionar em produção)
-   ├── Dockerfile        # Build da imagem Flask
-   ├── app.py            # Aplicação principal
-   └── requirements.txt  # Dependências Python
-```
 
-## Como funciona (passo a passo)
+A infraestrutura é definida inteiramente via código (`IaC`) no `docker-compose.yml`, criando um ambiente isolado onde:
 
-- **Subida**: `docker compose up` constrói a imagem `web`, cria containers e conecta cada um na rede padrão.
-- **Inicialização**: o container `db` executa `init.sql`, criando a tabela `visit_counter`; `web` aguarda o banco responder antes de aceitar requisições.
-- **Fluxo de requisição**: ao acessar `/`, a API verifica o cache Redis; se não houver dado, consulta o PostgreSQL, incrementa o contador e propaga o valor para o Redis.
-- **Health check**: endpoint `/health` retorna `200` quando Flask consegue se comunicar com os serviços dependentes.
+* **API Flask (`web`)**: Centraliza a regra de negócio. Implementa o padrão **Cache-Aside**: tenta ler do Redis primeiro; se falhar, busca no Postgres e atualiza o cache.
+* **PostgreSQL (`db`)**: Armazena o estado persistente (contador de visitas). Utiliza um *Volume Docker* para garantir que os dados sobrevivam ao reinício dos containers.
+* **Redis (`cache`)**: Atua como armazenamento efêmero de chave/valor para reduzir a carga no banco de dados e acelerar a resposta de leitura.
+* **Networking**: Todos os serviços comunicam-se através de uma rede `bridge` interna, utilizando os nomes dos serviços (`db`, `cache`) como *hostnames*.
 
-## Execução passo a passo
+### Fluxo de Dados Simplificado
 
-1. **Instale os pré-requisitos**
-  - Docker Desktop (ou Docker Engine com Compose v2)
-
-2. **Construa e suba os containers**
-  ```powershell
-  docker compose up --build
-  ```
-
-3. **Verifique a aplicação**
-  - Navegador: `http://localhost:8000/`
-  - Health check: `http://localhost:8000/health`
-
-4. **Teste a comunicação entre serviços**
-  - Consultar o contador direto no PostgreSQL:
-    ```powershell
-    docker compose exec db psql -U student -d student_notes -c "SELECT * FROM visit_counter;"
-    ```
-  - Conferir o valor em cache no Redis:
-    ```powershell
-    docker compose exec cache redis-cli GET visit_counter:homepage
-    ```
-  - Requisitar a API via linha de comando:
-    ```powershell
-    curl http://localhost:8000/
-    ```
-
-5. **Encerrar e limpar**
-  ```powershell
-  docker compose down -v
-  ```
-  Remove containers e o volume do banco para um recomeço limpo.
+```mermaid
+graph LR
+    User(Cliente HTTP) --> API[Flask API :8000]
+    API -- 1. Verifica Cache --> Redis[(Redis)]
+    API -- 2. Se falhar, lê/grava --> DB[(PostgreSQL)]
+    DB -- 3. Retorna dado --> API
+    API -- 4. Atualiza Cache --> Redis
