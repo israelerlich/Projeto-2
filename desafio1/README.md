@@ -19,6 +19,13 @@ A solução é composta por dois microsserviços leves que conversam entre si vi
 
 ### Fluxo de Comunicação
 
-o cliente resolve o hostname `container-servidor` via DNS da rede Docker, envia `GET /`, recebe HTTP 200 com timestamp, e o servidor registra o IP de origem no log.
-- **cleanup.ps1**: derruba os containers e remove a rede, garantindo que o ambiente volte ao estado inicial para outro teste.
+O cliente resolve o hostname `container-servidor` via DNS da rede Docker, envia `GET /`, recebe HTTP 200 com timestamp, e o servidor registra o IP de origem no log.
+
+🧩 Componentes do Projeto: 
+Arquivo/Container,Tipo,Função
+server/app.py,App,Responde na porta 8080 e registra logs de acesso.
+run_challenge.ps1,Script,"Setup: Limpa resíduos, cria rede, builda imagem e sobe containers."
+cleanup.ps1,Script,Teardown: Para e remove containers e a rede criada.
+container-cliente,Container,Simula um usuário fazendo polling contínuo no servidor.
+
 
