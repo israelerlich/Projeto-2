@@ -48,3 +48,48 @@ No terminal, execute o comando abaixo para construir as imagens e iniciar os con
 
 ```bash
 docker compose up --build
+```
+
+2. Testar os Endpoints
+Com os containers rodando, você pode testar via navegador ou terminal:
+```bash
+# Teste direto no Provedor de Dados (Serviço A)
+curl http://localhost:5001/users
+
+# Teste no Consumidor (Serviço B) - Este aciona o Serviço A internamente
+curl http://localhost:5002/info
+```
+
+3. Encerrar
+Para parar e remover os containers:
+```bash
+docker compose down
+```
+
+⚙️ Execução Local (Sem Docker)
+Caso queira rodar diretamente no Python em sua máquina (para desenvolvimento ou debug), siga os passos:
+
+Configurar Ambiente Virtual:
+```bash
+python -m venv .venv
+# No Windows:
+.\.venv\Scripts\Activate.ps1
+# No Linux/Mac:
+source .venv/bin/activate
+
+pip install flask requests
+```
+
+Rodar o Serviço A: Abra um terminal e execute:
+```bash
+cd servico-a
+python app.py
+```
+
+Rodar o Serviço B: Abra um segundo terminal e execute:
+```bash
+cd servico-b
+python app.py
+```
+
+
