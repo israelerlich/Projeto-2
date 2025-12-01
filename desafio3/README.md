@@ -10,9 +10,7 @@ Este projeto é um laboratório prático de orquestração de containers. Ele de
 
 O objetivo é exemplificar padrões de arquitetura como persistência de dados, *caching* para performance e isolamento de dependências usando uma stack leve e automatizada.
 
-## 🏗 Arquitetura e Decisões Técnicas 
-
-[Image of docker compose architecture diagram]
+## 🏗 Arquitetura e Decisões Técnicas
 
 
 A infraestrutura é definida inteiramente via código (`IaC`) no `docker-compose.yml`, criando um ambiente isolado onde:
