@@ -19,9 +19,6 @@ A solução é composta por dois microsserviços leves que conversam entre si vi
 
 ### Fluxo de Comunicação
 
-```mermaid
-graph LR
-    Client[Container: Cliente (Alpine)] -- "curl http://container-servidor:8080" --> Net((Rede Docker Bridge))
-    Net -- "Resolve DNS & Encaminha" --> Server[Container: Servidor (Flask)]
-    Server -- "HTTP 200 OK" --> Client
-```
+o cliente resolve o hostname `container-servidor` via DNS da rede Docker, envia `GET /`, recebe HTTP 200 com timestamp, e o servidor registra o IP de origem no log.
+- **cleanup.ps1**: derruba os containers e remove a rede, garantindo que o ambiente volte ao estado inicial para outro teste.
+
