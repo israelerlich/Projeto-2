@@ -31,3 +31,48 @@ graph LR
     API -- 2. Se falhar, lê/grava --> DB[(PostgreSQL)]
     DB -- 3. Retorna dado --> API
     API -- 4. Atualiza Cache --> Redis
+```
+
+🚀 Como Executar
+Pré-requisitos
+- Docker Desktop ou Docker Engine instalado.
+  1. Inicializar o Ambiente
+O comando abaixo constrói a imagem da aplicação, baixa as imagens do Postgres e Redis, e inicia toda a stack.
+```bash
+docker compose up --build
+```
+
+2. Verificar Funcionamento
+Acesse o navegador ou use o curl para interagir com a API:
+
+Página Principal: http://localhost:8000/
+Health Check: http://localhost:8000/health
+
+```bash
+# Teste via terminal
+curl http://localhost:8000/
+```
+
+3. Inspecionar os Serviços (Debug)
+Você pode executar comandos diretamente dentro dos containers em execução para validar se os dados estão sendo gravados corretamente.
+
+Consultar o Banco de Dados (PostgreSQL):
+```bash
+docker compose exec db psql -U student -d student_notes -c "SELECT * FROM visit_counter;"
+```
+
+Consultar o Cache (Redis):
+```bash
+docker compose exec cache redis-cli GET visit_counter:homepage
+```
+
+4. Encerrar e Limpar
+Para parar os serviços e remover os volumes (resetar o banco de dados):
+```bash
+docker compose down -v
+```
+
+
+
+
+
