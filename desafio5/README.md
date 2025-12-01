@@ -88,3 +88,10 @@ curl http://localhost:3000/users
 
 # Buscar pedidos do usuário 'u1'
 curl http://localhost:3000/users/u1/orders
+ ```
+
+🧹 Limpeza do Ambiente
+Para parar a execução e remover os containers e redes criados:
+```bash
+docker-compose down --rmi local --volumes
+ ```
