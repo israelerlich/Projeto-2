@@ -7,4 +7,8 @@ Estrutura do repositório:
 - /desafio4
 - /desafio5
 
-Cada pasta contém Dockerfile, docker-compose.yml (se houver) e instruções.
+Projeto da disciplina de Fundamentos de Computação Concorrente, Paralela e Distribuída.
+Curso: Bacharelado em Ciências da Computação
+
+Autores: [@GuitGud](https://github.com/GuitGud)
+         [@israelerlich](https://github.com/israelerlich)
