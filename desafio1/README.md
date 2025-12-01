@@ -1,79 +1,76 @@
-# Desafio Docker: Comunicação entre Containers
+# Desafio Docker: Comunicação e Automação com PowerShell
 
-Projeto demonstrativo criado para o desafio da disciplina, mostrando como dois containers Docker conseguem conversar entre si usando uma rede bridge customizada.
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
 
-## 🧭 Visão Geral da Solução
+Este projeto demonstra a comunicação entre containers isolados utilizando uma **rede Bridge customizada**.
 
-- **Arquitetura enxuta**: Dois microsserviços isolados (servidor Flask e cliente Alpine) conectados pela mesma rede Docker bridge.
-- **Automação via PowerShell**: Scripts `run_challenge.ps1` e `cleanup.ps1` cuidam do ciclo completo (setup → testes → teardown) para evitar comandos manuais e garantir repetibilidade.
-- **Decisões técnicas**:
-  - Python Flask escolhido pela simplicidade para expor um endpoint HTTP e logar as requisições.
-  - Alpine como cliente para manter a imagem leve; o `curl` é instalado somente em runtime.
-  - Rede nomeada (`minha-rede-customizada`) para permitir resolução de nomes (`container-servidor`) sem depender de IP fixo.
+Além da infraestrutura Docker, o projeto foca em **automação**: todo o ciclo de vida (criação da rede, build, execução e limpeza) é gerenciado por scripts PowerShell, garantindo que o ambiente de teste seja reprodutível e livre de erros manuais.
 
-## 🏗️ Como a Arquitetura Funciona
+## 🏗 Arquitetura e Decisões Técnicas
 
-- **server/app.py**: Flask responde na porta 8080 com a mensagem “Olá do Servidor!” e registra a origem da requisição.
-- **server/Dockerfile**: Base `python:3.9-slim`, copia `app.py`, instala Flask e expõe a porta 8080.
-- **run_challenge.ps1**:
-  1. Limpa containers/rede antigos (idempotência).
-  2. Cria rede bridge `minha-rede-customizada`.
-  3. Faz o build da imagem `meu-servidor-web` usando o `Dockerfile` do servidor.
-  4. Sobe `container-servidor` (publica porta 8080 no host).
-  5. Sobe `container-cliente`, que roda um loop `curl` a cada 5s.
-  6. Exibe os últimos logs de ambos para comprovar a troca de mensagens.
-- **Fluxo de comunicação**: o cliente resolve o hostname `container-servidor` via DNS da rede Docker, envia `GET /`, recebe HTTP 200 com timestamp, e o servidor registra o IP de origem no log.
-- **cleanup.ps1**: derruba os containers e remove a rede, garantindo que o ambiente volte ao estado inicial para outro teste.
+A solução é composta por dois microsserviços leves que conversam entre si via DNS interno do Docker:
 
-Estrutura dos arquivos:
+* **Servidor (`server`)**: Uma aplicação **Flask** minimalista que expõe a porta `8080` e loga o IP de quem fez a requisição.
+* **Cliente (`client`)**: Um container **Alpine Linux** (ultra-leve) que executa um loop de requisições `curl` a cada 5 segundos.
+* **Rede Customizada**: Utilizamos uma rede nomeada (`minha-rede-customizada`) em vez da bridge padrão. Isso permite a **Resolução de DNS Automática**, onde o cliente acessa o servidor pelo nome `container-servidor`, sem precisar saber o IP.
 
-```
-.
-├── server/
-│   ├── app.py
-│   └── Dockerfile
-├── run_challenge.ps1
-├── cleanup.ps1
-└── README.md
+### Fluxo de Comunicação
+
+```mermaid
+graph LR
+    Client[Container: Cliente (Alpine)] -- "curl http://container-servidor:8080" --> Net((Rede Docker Bridge))
+    Net -- "Resolve DNS & Encaminha" --> Server[Container: Servidor (Flask)]
+    Server -- "HTTP 200 OK" --> Client
 ```
 
-## ▶️ Execução Passo a Passo
+🧩 Componentes do Projeto:
+Arquivo/Container,Tipo,Função
+server/app.py,App,Responde na porta 8080 e registra logs de acesso.
+run_challenge.ps1,Script,"Setup: Limpa resíduos, cria rede, builda imagem e sobe containers."
+cleanup.ps1,Script,Teardown: Para e remove containers e a rede criada.
+container-cliente,Container,Simula um usuário fazendo polling contínuo no servidor.
 
-### Pré-requisitos
-- Docker Desktop instalado e em execução.
-- PowerShell (Windows PowerShell 5.1 ou PowerShell 7+).
+🚀 Execução Passo a Passo
+Pré-requisitos
+Docker Desktop instalado e rodando.
 
-### 1. Subir o ambiente e validar comunicação
-```powershell
+PowerShell 5.1 ou superior (Windows) ou PowerShell Core (Linux/Mac).
+
+1. Automação: Subir o Ambiente
+Execute o script principal. Ele fará todo o trabalho pesado (limpeza preventiva, build e run).
+
+
+```bash
 powershell -File run_challenge.ps1
 ```
-O script mostrará:
-- Rede criada (`docker network create` sucesso).
-- ID dos containers gerados.
-- Logs finais exibindo respostas 200 com a mensagem “Olá do Servidor!”.
 
-### 2. (Opcional) Inspecionar recursos manualmente
-```powershell
+O que acontece?
+
+Mensagem de criação da rede com sucesso.
+
+Logs em tempo real mostrando o cliente recebendo "Olá do Servidor!".
+
+2. Validação Manual
+Se quiser inspecionar o ambiente enquanto ele roda:
+
+```bash
+# Ver tabela de containers e portas
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Inspecionar detalhes da rede bridge
 docker network inspect minha-rede-customizada
+
+# Testar o servidor diretamente do seu host
 Invoke-WebRequest http://localhost:8080 | Select-Object -ExpandProperty Content
 ```
-Esses comandos rendem prints úteis: tabelas de containers ativos, detalhes da rede e resposta direta do servidor.
 
-### 3. Limpar o ambiente
-```powershell
+3. Limpeza do Ambiente
+Para garantir que não sobrem containers "órfãos" consumindo recursos, execute o script de limpeza:
+
+```bash
 powershell -File cleanup.ps1
 ```
-Remove containers e rede para que novos testes comecem limpos.
 
-
-## 🛠️ Detalhes Técnicos Extras
-
-- Servidor exposto em `localhost:8080` com mapeamento de porta (`-p 8080:8080`).
-- Loop do cliente roda em shell Alpine (`/bin/sh -c`), com pausa de 5 segundos para simular um polling simples.
-- `Set-StrictMode` e tratamento de erros nos scripts PowerShell ajudam a evitar estados inconsistentes caso o Docker esteja desligado ou os recursos não existam mais.
-
-## Autores
-
-- [@GuitGud](https://github.com/GuitGud)
-- [@israelerlich](https://github.com/israelerlich)
