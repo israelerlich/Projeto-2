@@ -30,4 +30,42 @@ O cliente resolve o hostname `container-servidor` via DNS da rede Docker, envia 
 | `cleanup.ps1` | Script | **Teardown:** Para e remove containers e a rede criada. |
 | `container-cliente` | Container | Simula um usuário fazendo *polling* contínuo no servidor. |
 
+🚀 Execução Passo a Passo
+Pré-requisitos
+Docker Desktop instalado e rodando.
+
+PowerShell 5.1 ou superior (Windows) ou PowerShell Core (Linux/Mac).
+
+
+```bash
+powershell -File run_challenge.ps1
+```
+
+O que esperar:
+
+Mensagem de criação da rede com sucesso.
+
+Logs em tempo real mostrando o cliente recebendo "Olá do Servidor!".
+
+2. Validação Manual (Opcional)
+Se quiser inspecionar o ambiente enquanto ele roda:
+
+```bash
+# Ver tabela de containers e portas
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Inspecionar detalhes da rede bridge
+docker network inspect minha-rede-customizada
+
+# Testar o servidor diretamente do seu host
+Invoke-WebRequest http://localhost:8080 | Select-Object -ExpandProperty Content
+```
+
+3. Limpeza do Ambiente
+Para garantir que não sobrem containers "órfãos" consumindo recursos, execute o script de limpeza:
+
+```bash
+powershell -File cleanup.ps1
+```
+
 
