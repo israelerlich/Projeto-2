@@ -1,6 +1,6 @@
 # Microsservicos Flask
 
-## Visao geral da solucao
+## Visão geral da solucao
 
 Aplicacao exemplo que demonstra comunicacao entre dois microsservicos Flask executados em containers Docker. O Servico A publica uma lista estatica de usuarios e o Servico B consome essa informacao para gerar mensagens formatadas. O Docker Compose orquestra ambos os containers em uma rede bridge unica, permitindo que os servicos conversem pelo nome DNS do container.
 
