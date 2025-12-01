@@ -1,102 +1,93 @@
-# Desafio 5 - Arquitetura com API Gateway
+# Desafio 5: Arquitetura de Microsserviços com API Gateway
 
-Este desafio apresenta uma topologia de microsserviços dividida em dois domínios principais (usuários e pedidos) orquestrados por um API Gateway. Ele serve como laboratório para explorar padrões de comunicação, desacoplamento entre serviços e isolamento de responsabilidades.
+![NodeJS](https://img.shields.io/badge/Node.js-20-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
 
-## Arquitetura e decisões técnicas
+Este projeto implementa uma arquitetura de microsserviços dividida em dois domínios de negócio (**Users** e **Orders**), orquestrados por um **API Gateway**. 
 
-- **Estilo arquitetural**: microsserviços independentes que comunicam via HTTP, cada um encapsulando seu contexto (users e orders).
-- **API Gateway**: camada frontal construída com Express para consolidar chamadas, aplicar roteamento e oferecer um ponto único de entrada (`http://localhost:3000`). Essa abordagem permite evoluir regras de autenticação, caching e observabilidade sem replicar lógica em cada serviço.
-- **Dados em memória**: os serviços de domínio utilizam repositórios em memória (arquivos `.js` em `src/data`) para simplificar o cenário. A estrutura foi preparada para troca futura por um banco externo.
-- **Comunicação síncrona**: gateway chama os serviços via HTTP usando endereços internos (`users-service:3001`, `orders-service:3002`) definidos pela rede padrão do Docker Compose.
-- **Observabilidade básica**: cada serviço expõe `/health` para checagens de disponibilidade e logs estruturados via `console.log` centralizando eventos relevantes.
+O objetivo é servir como um laboratório prático para explorar padrões de comunicação distribuída, desacoplamento de serviços e centralização de requisições.
 
-## Funcionamento dos componentes
+## arquitetura e Decisões Técnicas 
 
-- **Containers**: o `docker-compose.yml` cria três containers a partir de imagens Node.js configuradas pelos respectivos `Dockerfile`. Cada container instala dependências e expõe portas distintas (3000, 3001, 3002).
-- **Rede**: o Compose gera uma rede bridge nomeada, permitindo que os containers se descubram por hostname (ex.: o gateway acessa `http://users-service:3001/users`). Não há exposição direta dos serviços de domínio para o host, apenas o gateway fica acessível externamente.
-- **Fluxo de requisições**:
-   - Chamadas chegam ao gateway que identifica a rota desejada.
-   - O gateway encaminha a chamada para o serviço correspondente usando `axios`.
-   - Os serviços consultam seus repositórios em memória, aplicam filtros (por ID ou por usuário) e retornam ao gateway.
-   - O gateway responde para o consumidor, encapsulando eventuais erros (por exemplo, falhas de rede ou registros não encontrados) com mensagens padronizadas.
-- **Microsserviços**:
-   - `users-service`: expõe `/users`, `/users/:id` e `/health`, mantém o catálogo de usuários em `src/data/users.js` e aplica busca por ID no repositório (`src/repositories/userRepository.js`).
-   - `orders-service`: expõe `/orders`, `/orders/:id`, `/users/:userId/orders` e `/health`, consumindo dados de `src/data/orders.js`. Implementa lógica de filtragem por usuário em `src/services/orderService.js`.
+[Image of microservices architecture diagram]
 
-## Passo a passo de execução
+
+A solução foi desenhada priorizando a simplicidade da infraestrutura para focar nos padrões de arquitetura:
+
+* **API Gateway (BFF - Backend for Frontend):** * Construído com **Express**.
+    * Atua como ponto único de entrada (`http://localhost:3000`).
+    * Centraliza o roteamento e simplifica o consumo por parte do cliente, evitando que o front-end precise conhecer os endereços de cada microsserviço.
+* **Microsserviços Desacoplados:** * Cada serviço (`users-service` e `orders-service`) possui seu próprio contexto delimitado.
+    * Comunicação **síncrona via HTTP** utilizando a rede interna do Docker.
+* **Persistência In-Memory:** * Para fins didáticos, os dados são persistidos em memória (arquivos `.js` e vetores), eliminando a complexidade de configurar bancos de dados externos neste estágio.
+* **Observabilidade Básica:** * Implementação de *Health Checks* em todos os serviços.
+    * Logs estruturados no console para rastreamento de requisições.
+
+## 🧩 Componentes do Sistema
+
+| Componente | Porta Externa | Porta Interna | Descrição |
+| :--- | :---: | :---: | :--- |
+| **API Gateway** | `3000` | `3000` | Recebe as requisições externas e as encaminha para os serviços internos via rede `bridge`. |
+| **Users Service** | - | `3001` | Gerencia o catálogo de usuários. Acessível apenas pelo Gateway. |
+| **Orders Service** | - | `3002` | Gerencia os pedidos e consome dados de usuários quando necessário. |
+
+### Fluxo de Requisição
+1.  O cliente chama o Gateway (`GET /users/u1`).
+2.  O Gateway identifica a rota e dispara uma requisição HTTP interna (`axios`) para `http://users-service:3001/users/u1`.
+3.  O serviço processa a lógica de domínio e retorna o JSON.
+4.  O Gateway padroniza a resposta e a devolve ao cliente.
+
+## 🚀 Como Executar
 
 ### Pré-requisitos
+* [Docker](https://www.docker.com/) e Docker Compose instalados.
+* Porta `3000` livre no seu computador.
 
-- Docker Desktop ou Docker Engine 20+ com Docker Compose habilitado.
-- Porta 3000 livre no host (o gateway a utiliza). As portas 3001 e 3002 ficam isoladas na rede interna.
+### Passo a Passo
 
-### Subindo os containers
-
-1. Abra um terminal PowerShell na raiz do projeto (`desafio5`).
-2. Construa e inicialize todo o stack:
-
-    ```powershell
-docker-compose up --build
+1.  **Clone o repositório e acesse a pasta:**
+    ```bash
+    git clone <seu-repo>
+    cd desafio5
     ```
 
-    - O Compose cria a rede, monta cada container, instala dependências (`npm install`) e inicia os servidores Express.
-    - Aguarde as mensagens de log indicando que os serviços estão ouvindo nas portas configuradas.
-
-3. (Opcional) Utilize outro terminal para conferir o status:
-
-    ```powershell
-docker ps --filter "name=desafio5"
+2.  **Suba o ambiente com Docker Compose:**
+    Este comando irá construir as imagens, criar a rede isolada e iniciar os containers.
+    ```bash
+    docker-compose up --build
     ```
 
-### Testando a solução
+3.  **Verifique se está tudo rodando:**
+    ```bash
+    docker ps --filter "name=desafio5"
+    ```
 
-- Valide a saúde dos serviços:
+## 📡 Endpoints Disponíveis
 
-   ```powershell
+Você pode testar a API utilizando `curl`, Postman ou o navegador.
+
+| Método | Rota (Gateway) | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Verifica a saúde do Gateway e conectividade básica. |
+| `GET` | `/users` | Lista todos os usuários cadastrados. |
+| `GET` | `/users/:id` | Busca detalhes de um usuário específico (ex: `u1`). |
+| `GET` | `/orders` | Lista todos os pedidos. |
+| `GET` | `/orders/:id` | Busca detalhes de um pedido específico. |
+| `GET` | `/users/:id/orders` | **Aggregator Pattern**: Busca todos os pedidos de um usuário específico. |
+
+**Exemplos de teste no Terminal:**
+
+```bash
+# Verificar saúde do sistema
 curl http://localhost:3000/health
-   ```
 
-- Liste recursos expostos pelo gateway:
-
-   ```powershell
+# Listar usuários
 curl http://localhost:3000/users
-curl http://localhost:3000/orders
-   ```
 
-- Consulte registros específicos e fluxos compostos:
-
-   ```powershell
-curl http://localhost:3000/users/u1
-curl http://localhost:3000/orders/o1
+# Buscar pedidos do usuário 'u1'
 curl http://localhost:3000/users/u1/orders
-   ```
 
-### Encerrando e limpeza
-
-- Interrompa os containers ativos com `Ctrl + C` no terminal que roda o Compose.
-- Remova containers, redes e imagens intermediárias criadas para o desafio:
-
-   ```powershell
+🧹 Limpeza do Ambiente
+Para parar a execução e remover os containers e redes criados:
 docker-compose down --rmi local --volumes
-   ```
-
-## Estrutura de pastas
-
-```
-.
-├── docker-compose.yml
-├── gateway
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src
-├── orders-service
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src
-└── users-service
-      ├── Dockerfile
-      ├── package.json
-      └── src
-```
-
-Essa organização realça a independência de cada microsserviço, facilita a evolução isolada de funcionalidades e mantém o gateway como fachada controladora do ecossistema.
