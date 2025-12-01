@@ -1,4 +1,4 @@
-# Desafio 5: Arquitetura de Microsserviços com API Gateway
+# Arquitetura de Microsserviços com API Gateway
 
 ![NodeJS](https://img.shields.io/badge/Node.js-20-43853D?style=for-the-badge&logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
